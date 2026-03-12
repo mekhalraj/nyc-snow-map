@@ -1,0 +1,10 @@
+# Mapbox token — use config.template.js as reference
+config.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp

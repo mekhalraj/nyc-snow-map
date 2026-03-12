@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Snow Map — Winter 2025–26</title>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #E6E2DD;
+  --bg-panel: #F4F1ED;
+  --bg-card: #FFFFFF;
+  --text-primary: #1A1A1A;
+  --text-secondary: #5C5C5C;
+  --text-muted: #8A8A8A;
+  --accent: #2B5EA7;
+  --accent-light: #4A7FCA;
+  --accent-subtle: rgba(43,94,167,0.08);
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.15);
+  --snow-heavy: #1B3A6B;
+  --snow-mid: #4A7FCA;
+  --snow-light: #A8C8F0;
+  --snow-trace: #D6E5F5;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.1);
+  --radius: 8px;
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ─── HEADER ─── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.header-left { display: flex; align-items: baseline; gap: 12px; }
+.header-title {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 900;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+}
+.header-title span { color: var(--accent); }
+.header-subtitle {
+  font-size: 13px; font-weight: 300;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+.header-stats {
+  display: flex; gap: 24px; align-items: center;
+}
+.stat-item {
+  text-align: right;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 10px; font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── MAP ─── */
+.map-container {
+  position: fixed;
+  top: 56px; left: 0; right: 340px; bottom: 0;
+}
+#map { width: 100%; height: 100%; }
+
+.mapboxgl-ctrl-attrib { display: none !important; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  position: fixed;
+  top: 56px; right: 0; bottom: 0;
+  width: 340px;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+/* ─── SECTION TITLES ─── */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 700;
+  color: var(--text-primary);
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+
+/* ─── STORM CARDS ─── */
+.storms-grid { display: flex; flex-direction: column; gap: 8px; }
+.storm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.storm-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-2px);
+}
+.storm-card.active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.storm-info { flex: 1; }
+.storm-date {
+  font-weight: 700; font-size: 14px;
+  color: var(--text-primary);
+}
+.storm-detail {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 2px;
+}
+.storm-amount {
+  font-family: var(--font-display);
+  font-size: 24px; font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.storm-unit {
+  font-family: var(--font-body);
+  font-size: 10px; font-weight: 500;
+  color: var(--text-muted);
+}
+.storm-card-seasonal {
+  background: linear-gradient(135deg, var(--accent) 0%, #1B3A6B 100%);
+  border: none;
+}
+.storm-card-seasonal .storm-date,
+.storm-card-seasonal .storm-detail { color: rgba(255,255,255,0.85); }
+.storm-card-seasonal .storm-amount { color: #fff; }
+.storm-card-seasonal .storm-unit { color: rgba(255,255,255,0.7); }
+.storm-card-seasonal:hover { transform: translateX(-2px); box-shadow: var(--shadow-md); }
+.storm-card-seasonal.active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
+
+/* ─── BOROUGH BREAKDOWN ─── */
+.borough-bars { display: flex; flex-direction: column; gap: 6px; }
+.borough-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.borough-name {
+  width: 90px; font-size: 12px; font-weight: 500;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+}
+.borough-bar-wrap {
+  flex: 1; height: 22px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.borough-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--snow-light), var(--accent));
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  min-width: 2px;
+}
+.borough-val {
+  width: 42px; font-size: 12px; font-weight: 700;
+  color: var(--text-primary);
+  text-align: left;
+  flex-shrink: 0;
+}
+
+/* ─── HISTORICAL CHART ─── */
+.chart-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.chart-canvas-wrap {
+  width: 100%; height: 160px;
+  position: relative;
+}
+.chart-canvas-wrap canvas { width: 100%; height: 100%; }
+.chart-legend {
+  display: flex; gap: 16px; margin-top: 8px;
+  font-size: 10px; color: var(--text-muted);
+}
+.chart-legend-item { display: flex; align-items: center; gap: 4px; }
+.chart-legend-dot {
+  width: 8px; height: 8px; border-radius: 2px;
+}
+
+/* ─── COMPARE WIDGET ─── */
+.compare-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.compare-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.compare-row:last-child { border-bottom: none; }
+.compare-metric {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  flex: 1;
+}
+.compare-city {
+  width: 70px; text-align: center;
+  font-size: 14px; font-weight: 700;
+}
+.compare-city.nyc { color: var(--accent); }
+.compare-city.bos { color: #C0392B; }
+.compare-header {
+  font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted);
+  padding-bottom: 4px;
+}
+.compare-link {
+  display: block; text-align: center;
+  margin-top: 12px; padding: 8px;
+  background: var(--accent-subtle);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: 12px; font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.compare-link:hover { background: rgba(43,94,167,0.15); }
+
+/* ─── TOOLTIP ─── */
+.map-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 10px 14px;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  z-index: 50;
+  max-width: 240px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.map-tooltip.visible { opacity: 1; }
+.tooltip-name {
+  font-weight: 700; font-size: 14px;
+  margin-bottom: 2px;
+}
+.tooltip-boro {
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.tooltip-snow {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700;
+  color: var(--accent);
+}
+.tooltip-snow-label {
+  font-size: 10px; color: var(--text-muted);
+}
+
+/* ─── LEGEND ─── */
+.map-legend {
+  position: absolute;
+  bottom: 24px; left: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+.legend-title {
+  font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.legend-bar {
+  width: 180px; height: 10px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--snow-trace), var(--snow-light), var(--snow-mid), var(--snow-heavy));
+}
+.legend-labels {
+  display: flex; justify-content: space-between;
+  margin-top: 4px;
+  font-size: 10px; color: var(--text-muted);
+}
+
+/* ─── SNOW ANIMATION ─── */
+#snowCanvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 200;
+  opacity: 0.35;
+}
+
+/* ─── LOADING ─── */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+  z-index: 999;
+  transition: opacity 0.5s;
+}
+.loading-overlay.hidden { opacity: 0; pointer-events: none; }
+.loading-text {
+  font-family: var(--font-display);
+  font-size: 24px; font-weight: 700;
+  color: var(--text-primary);
+}
+.loading-sub {
+  font-size: 13px; color: var(--text-muted);
+}
+.loading-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 800px) {
+  .sidebar { display: none; }
+  .map-container { right: 0; }
+  .header-stats { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">NYC Snow Map</div>
+  <div class="loading-sub">Loading neighborhood data…</div>
+</div>
+
+<canvas id="snowCanvas"></canvas>
+
+<header class="header">
+  <div class="header-left">
+    <div class="header-title">NYC <span>Snow Map</span></div>
+    <div class="header-subtitle">Winter 2025–26</div>
+  </div>
+  <div class="header-stats" id="headerStats"></div>
+</header>
+
+<div class="map-container">
+  <div id="map"></div>
+  <div class="map-tooltip" id="tooltip"></div>
+  <div class="map-legend">
+    <div class="legend-title">Seasonal Snowfall</div>
+    <div class="legend-bar"></div>
+    <div class="legend-labels">
+      <span>5 in</span><span>25 in</span><span>40 in</span><span>55 in</span>
+    </div>
+  </div>
+</div>
+
+<aside class="sidebar">
+  <div>
+    <div class="section-title">Storms</div>
+    <div class="storms-grid" id="stormsGrid"></div>
+  </div>
+  <div>
+    <div class="section-title">Borough Breakdown</div>
+    <div class="borough-bars" id="boroughBars"></div>
+  </div>
+  <div>
+    <div class="section-title">Historical Snowfall</div>
+    <div class="chart-container">
+      <div class="chart-canvas-wrap"><canvas id="histChart"></canvas></div>
+      <div class="chart-legend">
+        <div class="chart-legend-item">
+          <div class="chart-legend-dot" style="background:var(--accent)"></div>2025–26
+        </div>
+        <div class="chart-legend-item">
+          <div class="chart-legend-dot" style="background:var(--border-strong)"></div>Other Winters
+        </div>
+        <div class="chart-legend-item">
+          <div class="chart-legend-dot" style="background:var(--text-muted);height:2px;width:12px;border-radius:0"></div>Average
+        </div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-title">vs Boston</div>
+    <div class="compare-widget" id="compareWidget">
+      <div class="compare-row">
+        <div class="compare-metric"></div>
+        <div class="compare-city compare-header" style="color:var(--accent)">NYC</div>
+        <div class="compare-city compare-header" style="color:#C0392B">Boston</div>
+      </div>
+      <div id="compareRows"></div>
+      <a class="compare-link" href="https://mekhalraj.github.io/boston-snow-map" target="_blank">
+        Explore Boston Snow Map →
+      </a>
+    </div>
+  </div>
+</aside>
+
+<script src="config.js"></script>
+<script>
+// ─── DATA PATHS ───
+// For local dev, these can be relative paths
+// For GitHub Pages, they'll be in /data/
+const DATA_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? '.' : './data';
+
+const BOSTON_DATA_URL = 'https://mekhalraj.github.io/boston-snow-map';
+
+// ─── STATE ───
+let neighborhoodsData = null;
+let boroughsData = null;
+let stormsData = null;
+let historicalData = null;
+let bostonHistorical = null;
+let activeStorm = 'seasonal';
+let map = null;
+
+// ─── MAPBOX ───
+// Token loaded from config.js (gitignored) — see config.template.js
+if (typeof MAPBOX_TOKEN === 'undefined') {
+  console.error('MAPBOX_TOKEN not found. Copy config.template.js to config.js and add your token.');
+  document.querySelector('.loading-sub').textContent = 'Missing config.js — see console.';
+}
+mapboxgl.accessToken = typeof MAPBOX_TOKEN !== 'undefined' ? MAPBOX_TOKEN : '';
+
+// ─── LOAD DATA ───
+async function loadData() {
+  try {
+    const [nbResp, boroResp, stormsResp, histResp] = await Promise.all([
+      fetch(`${DATA_BASE}/nyc_neighborhoods.geojson`),
+      fetch(`${DATA_BASE}/nyc_boroughs.geojson`),
+      fetch(`${DATA_BASE}/nyc_storms.json`),
+      fetch(`${DATA_BASE}/nyc_historical.json`)
+    ]);
+    neighborhoodsData = await nbResp.json();
+    boroughsData = await boroResp.json();
+    stormsData = await stormsResp.json();
+    historicalData = await histResp.json();
+
+    // Try to fetch Boston historical data for comparison
+    try {
+      const bosResp = await fetch(`${BOSTON_DATA_URL}/data/boston_historical.json`);
+      if (bosResp.ok) bostonHistorical = await bosResp.json();
+    } catch(e) { console.log('Boston data unavailable for comparison'); }
+
+    return true;
+  } catch(e) {
+    console.error('Data load error:', e);
+    return false;
+  }
+}
+
+// ─── INIT MAP ───
+function initMap() {
+  map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [-73.95, 40.71],
+    zoom: 10.2,
+    minZoom: 9,
+    maxZoom: 15,
+    pitch: 0
+  });
+
+  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+
+  map.on('load', () => {
+    // Add neighborhood source
+    map.addSource('neighborhoods', { type: 'geojson', data: neighborhoodsData });
+
+    // Neighborhood fill
+    map.addLayer({
+      id: 'neighborhoods-fill',
+      type: 'fill',
+      source: 'neighborhoods',
+      paint: {
+        'fill-color': buildColorExpr('snow_seasonal'),
+        'fill-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          9.5, 0, 10.5, 0.75
+        ]
+      }
+    });
+
+    // Neighborhood outlines
+    map.addLayer({
+      id: 'neighborhoods-line',
+      type: 'line',
+      source: 'neighborhoods',
+      paint: {
+        'line-color': 'rgba(255,255,255,0.6)',
+        'line-width': [
+          'interpolate', ['linear'], ['zoom'],
+          10, 0.3, 13, 1
+        ],
+        'line-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          9.5, 0, 10.5, 1
+        ]
+      }
+    });
+
+    // Add borough source
+    map.addSource('boroughs', { type: 'geojson', data: boroughsData });
+
+    // Borough fill
+    map.addLayer({
+      id: 'boroughs-fill',
+      type: 'fill',
+      source: 'boroughs',
+      paint: {
+        'fill-color': buildBoroughColorExpr('snow_seasonal_mean'),
+        'fill-opacity': [
+          'interpolate', ['linear'], ['zoom'],
+          9.5, 0.7, 10.5, 0
+        ]
+      }
+    });
+
+    // Borough outlines (always visible)
+    map.addLayer({
+      id: 'boroughs-line',
+      type: 'line',
+      source: 'boroughs',
+      paint: {
+        'line-color': 'rgba(0,0,0,0.25)',
+        'line-width': 2
+      }
+    });
+
+    // Borough labels
+    map.addLayer({
+      id: 'boroughs-labels',
+      type: 'symbol',
+      source: 'boroughs',
+      layout: {
+        'text-field': ['get', 'borough_name'],
+        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 9, 13, 12, 16],
+        'text-transform': 'uppercase',
+        'text-letter-spacing': 0.1
+      },
+      paint: {
+        'text-color': '#1A1A1A',
+        'text-halo-color': 'rgba(244,241,237,0.9)',
+        'text-halo-width': 2
+      }
+    });
+
+    // Hover interactions
+    setupHover();
+    hideLoading();
+  });
+}
+
+// ─── COLOR SCALES ───
+function buildColorExpr(prop) {
+  return [
+    'interpolate', ['linear'], ['coalesce', ['get', prop], 0],
+    5,  '#D6E5F5',
+    15, '#A8C8F0',
+    25, '#6BA3E0',
+    35, '#4A7FCA',
+    45, '#2B5EA7',
+    55, '#1B3A6B'
+  ];
+}
+
+function buildBoroughColorExpr(prop) {
+  return [
+    'interpolate', ['linear'], ['coalesce', ['get', prop], 0],
+    15, '#D6E5F5',
+    25, '#A8C8F0',
+    35, '#6BA3E0',
+    45, '#2B5EA7'
+  ];
+}
+
+// ─── UPDATE MAP COLORS ───
+function updateMapForStorm(stormId) {
+  if (!map || !map.isStyleLoaded()) return;
+
+  let nbProp, boroPropMean;
+  if (stormId === 'seasonal') {
+    nbProp = 'snow_seasonal';
+    boroPropMean = 'snow_seasonal_mean';
+  } else {
+    nbProp = `snow_${stormId}`;
+    boroPropMean = `snow_${stormId}_mean`;
+  }
+
+  map.setPaintProperty('neighborhoods-fill', 'fill-color', buildColorExpr(nbProp));
+
+  // Check if borough prop exists
+  const boroFeature = boroughsData.features[0];
+  if (boroFeature.properties[boroPropMean] !== undefined) {
+    map.setPaintProperty('boroughs-fill', 'fill-color', buildBoroughColorExpr(boroPropMean));
+  }
+
+  // Update borough bars
+  renderBoroughBars(stormId);
+}
+
+// ─── HOVER ───
+function setupHover() {
+  const tooltip = document.getElementById('tooltip');
+  let hoveredId = null;
+
+  map.on('mousemove', (e) => {
+    const bbox = [[e.point.x - 5, e.point.y - 5], [e.point.x + 5, e.point.y + 5]];
+    let features = map.queryRenderedFeatures(bbox, { layers: ['neighborhoods-fill'] });
+
+    // If zoomed out, try borough layer
+    if (!features.length) {
+      features = map.queryRenderedFeatures(bbox, { layers: ['boroughs-fill'] });
+      if (features.length) {
+        const f = features[0];
+        const name = f.properties.borough_name;
+        const snowProp = activeStorm === 'seasonal' ? 'snow_seasonal_mean' : `snow_${activeStorm}_mean`;
+        const snow = f.properties[snowProp];
+        tooltip.innerHTML = `
+          <div class="tooltip-name">${name}</div>
+          <div class="tooltip-snow">${snow ? snow.toFixed(1) : '—'}<span class="tooltip-snow-label"> in</span></div>
+          <div class="tooltip-snow-label">${activeStorm === 'seasonal' ? 'Season Avg' : 'Storm Avg'}</div>
+        `;
+        tooltip.classList.add('visible');
+        tooltip.style.left = (e.point.x + 15) + 'px';
+        tooltip.style.top = (e.point.y - 10) + 'px';
+        map.getCanvas().style.cursor = 'pointer';
+        return;
+      }
+    }
+
+    if (features.length) {
+      const f = features[0];
+      const name = f.properties.NTAName || f.properties.ntaname || 'Unknown';
+      const boro = f.properties.BoroName || f.properties.boroname || '';
+      const snowProp = activeStorm === 'seasonal' ? 'snow_seasonal' : `snow_${activeStorm}`;
+      const snow = f.properties[snowProp];
+
+      tooltip.innerHTML = `
+        <div class="tooltip-name">${name}</div>
+        <div class="tooltip-boro">${boro}</div>
+        <div class="tooltip-snow">${snow ? parseFloat(snow).toFixed(1) : '—'}<span class="tooltip-snow-label"> in</span></div>
+        <div class="tooltip-snow-label">${activeStorm === 'seasonal' ? 'Season Total' : 'Storm Total'}</div>
+      `;
+      tooltip.classList.add('visible');
+      tooltip.style.left = (e.point.x + 15) + 'px';
+      tooltip.style.top = (e.point.y - 10) + 'px';
+      map.getCanvas().style.cursor = 'pointer';
+    } else {
+      tooltip.classList.remove('visible');
+      map.getCanvas().style.cursor = '';
+    }
+  });
+
+  map.on('mouseleave', 'neighborhoods-fill', () => {
+    tooltip.classList.remove('visible');
+    map.getCanvas().style.cursor = '';
+  });
+}
+
+// ─── RENDER HEADER STATS ───
+function renderHeaderStats() {
+  const container = document.getElementById('headerStats');
+  const current = historicalData.years.find(y => y.is_current);
+  const nStorms = stormsData.storms.length;
+  const nNeighborhoods = neighborhoodsData.features.length;
+
+  container.innerHTML = `
+    <div class="stat-item">
+      <div class="stat-value">${stormsData.season_total_in}"</div>
+      <div class="stat-label">Season Total</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">#${current ? current.rank : '—'}</div>
+      <div class="stat-label">All-Time Rank</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">${nStorms}</div>
+      <div class="stat-label">Storms</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">${nNeighborhoods}</div>
+      <div class="stat-label">Neighborhoods</div>
+    </div>
+  `;
+}
+
+// ─── RENDER STORM CARDS ───
+function renderStormCards() {
+  const grid = document.getElementById('stormsGrid');
+  let html = '';
+
+  // Seasonal card
+  html += `
+    <div class="storm-card storm-card-seasonal ${activeStorm === 'seasonal' ? 'active' : ''}"
+         onclick="selectStorm('seasonal')">
+      <div class="storm-info">
+        <div class="storm-date">Full Season</div>
+        <div class="storm-detail">Oct 2025 – Mar 2026</div>
+      </div>
+      <div>
+        <div class="storm-amount">${stormsData.season_total_in}<span class="storm-unit"> in</span></div>
+      </div>
+    </div>
+  `;
+
+  // Individual storms
+  for (const s of stormsData.storms) {
+    const isActive = activeStorm === s.id;
+    html += `
+      <div class="storm-card ${isActive ? 'active' : ''}" onclick="selectStorm('${s.id}')">
+        <div class="storm-info">
+          <div class="storm-date">${s.label}</div>
+          <div class="storm-detail">Peak: ${s.peak_snow_in}" · ${s.n_days} day${s.n_days > 1 ? 's' : ''}</div>
+        </div>
+        <div>
+          <div class="storm-amount">${s.avg_snow_in}<span class="storm-unit"> in</span></div>
+        </div>
+      </div>
+    `;
+  }
+  grid.innerHTML = html;
+}
+
+function selectStorm(stormId) {
+  activeStorm = stormId;
+  renderStormCards();
+  updateMapForStorm(stormId);
+}
+
+// ─── RENDER BOROUGH BARS ───
+function renderBoroughBars(stormId) {
+  const container = document.getElementById('boroughBars');
+  const boroughs = boroughsData.features.map(f => f.properties);
+
+  let prop;
+  if (!stormId || stormId === 'seasonal') {
+    prop = 'snow_seasonal_mean';
+  } else {
+    prop = `snow_${stormId}_mean`;
+  }
+
+  const maxVal = Math.max(...boroughs.map(b => b[prop] || 0));
+  const sorted = [...boroughs].sort((a, b) => (b[prop] || 0) - (a[prop] || 0));
+
+  let html = '';
+  for (const b of sorted) {
+    const val = b[prop] || 0;
+    const pct = maxVal > 0 ? (val / maxVal * 100) : 0;
+    html += `
+      <div class="borough-row">
+        <div class="borough-name">${b.borough_name}</div>
+        <div class="borough-bar-wrap">
+          <div class="borough-bar" style="width:${pct}%"></div>
+        </div>
+        <div class="borough-val">${val.toFixed(1)}"</div>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+// ─── RENDER HISTORICAL CHART ───
+function renderHistoricalChart() {
+  const canvas = document.getElementById('histChart');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+  const pad = { top: 10, right: 10, bottom: 24, left: 32 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  const years = historicalData.years;
+  const maxSnow = Math.max(...years.map(y => y.snow_in)) * 1.05;
+  const barW = Math.max(1, plotW / years.length - 1);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Y-axis gridlines
+  ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+  ctx.lineWidth = 1;
+  for (let v = 0; v <= maxSnow; v += 20) {
+    const y = pad.top + plotH - (v / maxSnow * plotH);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(W - pad.right, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8A8A8A';
+    ctx.font = '9px DM Sans';
+    ctx.textAlign = 'right';
+    ctx.fillText(v + '"', pad.left - 4, y + 3);
+  }
+
+  // Bars
+  years.forEach((yr, i) => {
+    const x = pad.left + (i / years.length) * plotW;
+    const h = (yr.snow_in / maxSnow) * plotH;
+    const y = pad.top + plotH - h;
+
+    if (yr.is_current) {
+      ctx.fillStyle = '#2B5EA7';
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    }
+    ctx.fillRect(x, y, barW, h);
+  });
+
+  // Average line
+  const avgY = pad.top + plotH - (historicalData.mean_snow / maxSnow * plotH);
+  ctx.strokeStyle = '#8A8A8A';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.moveTo(pad.left, avgY);
+  ctx.lineTo(W - pad.right, avgY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Avg label
+  ctx.fillStyle = '#8A8A8A';
+  ctx.font = '9px DM Sans';
+  ctx.textAlign = 'left';
+  ctx.fillText(`avg ${historicalData.mean_snow}"`, W - pad.right - 50, avgY - 4);
+
+  // X-axis labels (decades)
+  ctx.fillStyle = '#8A8A8A';
+  ctx.font = '9px DM Sans';
+  ctx.textAlign = 'center';
+  years.forEach((yr, i) => {
+    if (yr.start_year % 10 === 0) {
+      const x = pad.left + (i / years.length) * plotW + barW / 2;
+      ctx.fillText(yr.start_year, x, H - 4);
+    }
+  });
+}
+
+// ─── RENDER COMPARE WIDGET ───
+function renderCompareWidget() {
+  const container = document.getElementById('compareRows');
+  const current = historicalData.years.find(y => y.is_current);
+
+  // Boston comparison data
+  let bostonTotal = '—';
+  let bostonRank = '—';
+  let bostonAvg = '—';
+  let bostonStorms = '—';
+
+  if (bostonHistorical) {
+    const bosCurrent = bostonHistorical.years.find(y => y.is_current);
+    if (bosCurrent) {
+      bostonTotal = bosCurrent.snow_in + '"';
+      bostonRank = '#' + bosCurrent.rank;
+    }
+    bostonAvg = bostonHistorical.mean_snow + '"';
+  } else {
+    // Fallback hardcoded from your Boston project
+    bostonTotal = '62.5"';
+    bostonRank = '#10';
+    bostonAvg = '42.5"';
+  }
+
+  const rows = [
+    { metric: 'Season Total', nyc: stormsData.season_total_in + '"', boston: bostonTotal },
+    { metric: 'Historical Avg', nyc: historicalData.mean_snow + '"', boston: bostonAvg },
+    { metric: 'All-Time Rank', nyc: current ? '#' + current.rank : '—', boston: bostonRank },
+    { metric: 'Storms', nyc: stormsData.storms.length, boston: '7' },
+    { metric: 'Neighborhoods', nyc: neighborhoodsData.features.length, boston: '23' },
+  ];
+
+  let html = '';
+  for (const r of rows) {
+    html += `
+      <div class="compare-row">
+        <div class="compare-metric">${r.metric}</div>
+        <div class="compare-city nyc">${r.nyc}</div>
+        <div class="compare-city bos">${r.boston}</div>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+// ─── SNOW ANIMATION ───
+function initSnow() {
+  const canvas = document.getElementById('snowCanvas');
+  const ctx = canvas.getContext('2d');
+  let flakes = [];
+  const NUM_FLAKES = 120;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < NUM_FLAKES; i++) {
+    flakes.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 2.5 + 0.5,
+      vx: Math.random() * 0.4 - 0.2,
+      vy: Math.random() * 0.8 + 0.3,
+      opacity: Math.random() * 0.4 + 0.2
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const f of flakes) {
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(90, 130, 180, ${f.opacity})`;
+      ctx.fill();
+
+      f.x += f.vx + Math.sin(f.y * 0.01) * 0.3;
+      f.y += f.vy;
+
+      if (f.y > canvas.height + 5) {
+        f.y = -5;
+        f.x = Math.random() * canvas.width;
+      }
+      if (f.x > canvas.width + 5) f.x = -5;
+      if (f.x < -5) f.x = canvas.width + 5;
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ─── LOADING ───
+function hideLoading() {
+  setTimeout(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }, 400);
+}
+
+// ─── INIT ───
+async function init() {
+  const loaded = await loadData();
+  if (!loaded) {
+    document.querySelector('.loading-sub').textContent = 'Error loading data. Check console.';
+    return;
+  }
+
+  renderHeaderStats();
+  renderStormCards();
+  renderBoroughBars('seasonal');
+  renderCompareWidget();
+  initMap();
+  initSnow();
+
+  // Render chart after a brief delay so container has dimensions
+  setTimeout(renderHistoricalChart, 500);
+  window.addEventListener('resize', renderHistoricalChart);
+}
+
+init();
+</script>
+</body>
+</html>
