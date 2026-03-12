@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NYC Snow Map — Winter 2025–26</title>
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.1.1/dist/maplibre-gl.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
 <style>
@@ -94,7 +94,7 @@ body {
 }
 #map { width: 100%; height: 100%; }
 
-.mapboxgl-ctrl-attrib { display: none !important; }
+.maplibregl-ctrl-attrib { display: none !important; }
 
 /* ─── SIDEBAR ─── */
 .sidebar {
@@ -447,7 +447,6 @@ body {
   </div>
 </aside>
 
-<script src="config.js"></script>
 <script>
 // ─── DATA PATHS ───
 const DATA_BASE = '.';
@@ -463,13 +462,7 @@ let bostonHistorical = null;
 let activeStorm = 'seasonal';
 let map = null;
 
-// ─── MAPBOX ───
-// Token loaded from config.js (gitignored) — see config.template.js
-if (typeof MAPBOX_TOKEN === 'undefined') {
-  console.error('MAPBOX_TOKEN not found. Copy config.template.js to config.js and add your token.');
-  document.querySelector('.loading-sub').textContent = 'Missing config.js — see console.';
-}
-mapboxgl.accessToken = typeof MAPBOX_TOKEN !== 'undefined' ? MAPBOX_TOKEN : '';
+// ─── MAPLIBRE (no token needed) ───
 
 // ─── LOAD DATA ───
 async function loadData() {
@@ -500,9 +493,9 @@ async function loadData() {
 
 // ─── INIT MAP ───
 function initMap() {
-  map = new mapboxgl.Map({
+  map = new maplibregl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/light-v11',
+    style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
     center: [-73.95, 40.71],
     zoom: 10.2,
     minZoom: 9,
@@ -510,7 +503,7 @@ function initMap() {
     pitch: 0
   });
 
-  map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left');
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
 
   map.on('load', () => {
     // Add neighborhood source
