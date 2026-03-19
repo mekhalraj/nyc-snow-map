@@ -108,8 +108,8 @@ nyc-snow-map/
 | Metric | NYC (Central Park) | NJ (Newark) | Boston (Logan) |
 |--------|-------------------|-------------|----------------|
 | Season total | 43.4" | 54.5" | 62.5" |
-| Historical avg | 26.6" | — | 42.5" |
-| All-time rank | #15 | — | #10 |
+| Historical avg | 26.6" | 28.7" | 42.5" |
+| All-time rank | #15 | #10 | #10 |
 | Storms | 5 | 5 | 7 |
 | Areas mapped | 262 | ~125 | 41,000+ |
 
